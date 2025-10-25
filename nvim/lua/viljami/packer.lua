@@ -3,6 +3,23 @@
 -- Only required if you have packer configured as `opt`
 vim.cmd.packadd("packer.nvim")
 
+
+-- Plug('mason-org/mason.nvim')
+-- Plug('mason-org/mason-lspconfig.nvim')
+-- Plug('neovim/nvim-lspconfig')
+-- Plug('nvim-lua/plenary.nvim')
+-- Plug('nvim-treesitter/nvim-treesitter')
+-- Plug('tpope/vim-fugitive')
+-- Plug('nvim-telescope/telescope.nvim')
+-- Plug('theprimeagen/harpoon')
+-- Plug('github/copilot.vim')
+-- Plug('rose-pine/neovim')
+-- Plug('hrsh7th/nvim-cmp')
+-- Plug('hrsh7th/cmp-nvim-lsp')
+-- Plug('MeanderingProgrammer/render-markdown.nvim')
+
+
+
 return require("packer").startup(function(use)
 	-- Packer can manage itself
 	use("wbthomason/packer.nvim")
