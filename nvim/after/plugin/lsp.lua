@@ -1,120 +1,104 @@
--- Mason setup to install LSP servers
-require("mason").setup()
+vim.api.nvim_create_autocmd('LspAttach', {
+  group = vim.api.nvim_create_augroup('user_lsp_attach', {clear = true}),
+  callback = function(event)
+    local opts = {buffer = event.buf}
 
--- Set up Mason for LSP config
-require("mason-lspconfig").setup({
+    vim.keymap.set('n', 'gd', function() vim.lsp.buf.definition() end, opts)
+    vim.keymap.set('n', 'K', function() vim.lsp.buf.hover() end, opts)
+    vim.keymap.set('n', '<leader>vws', function() vim.lsp.buf.workspace_symbol() end, opts)
+    vim.keymap.set('n', '<leader>vd', function() vim.diagnostic.open_float() end, opts)
+    vim.keymap.set('n', '[d', function() vim.diagnostic.goto_next() end, opts)
+    vim.keymap.set('n', ']d', function() vim.diagnostic.goto_prev() end, opts)
+    vim.keymap.set('n', '<leader>vca', function() vim.lsp.buf.code_action() end, opts)
+    vim.keymap.set('n', '<leader>vrr', function() vim.lsp.buf.references() end, opts)
+    vim.keymap.set('n', '<leader>vrn', function() vim.lsp.buf.rename() end, opts)
+    vim.keymap.set('i', '<C-h>', function() vim.lsp.buf.signature_help() end, opts)
+  end,
+})
+
+local lsp_capabilities = require('cmp_nvim_lsp').default_capabilities()
+
+require('mason').setup({})
+require('mason-lspconfig').setup({
     ensure_installed = {
-        "pyright", -- Python language server
-        "pylsp", -- Python LSP server
-        "volar", -- Vue.js LSP server
+                --"pylsp",
+                "ruff",
+                "lua_ls",
     },
-    handlers = {
-        function(server_name)
-            require("lspconfig")[server_name].setup({})
-        end,
-    },
-})
-
--- LSP Zero setup
-local lsp_zero = require("lsp-zero")
-
--- Attach function for setting up LSP key mappings
-lsp_zero.on_attach(function(client, bufnr)
-    local opts = { buffer = bufnr, remap = false }
-
-    vim.keymap.set("n", "gd", vim.lsp.buf.definition, opts)
-    vim.keymap.set("n", "K", vim.lsp.buf.hover, opts)
-    vim.keymap.set("n", "<leader>vws", vim.lsp.buf.workspace_symbol, opts)
-    vim.keymap.set("n", "<leader>vd", vim.diagnostic.open_float, opts)
-    vim.keymap.set("n", "[d", vim.diagnostic.goto_next, opts)
-    vim.keymap.set("n", "]d", vim.diagnostic.goto_prev, opts)
-    vim.keymap.set("n", "<leader>vca", vim.lsp.buf.code_action, opts)
-    vim.keymap.set("n", "<leader>vrr", vim.lsp.buf.references, opts)
-    vim.keymap.set("n", "<leader>vrn", vim.lsp.buf.rename, opts)
-    vim.keymap.set("i", "<C-h>", vim.lsp.buf.signature_help, opts)
-end)
-
--- nvim-cmp setup
-local cmp = require("cmp")
-local cmp_select = { behavior = cmp.SelectBehavior.Select }
-local cmp_mappings = {
-    ["<C-p>"] = cmp.mapping.select_prev_item(cmp_select),
-    ["<C-n>"] = cmp.mapping.select_next_item(cmp_select),
-    ["<C-y>"] = cmp.mapping.confirm({ select = true }),
-    ["<C-Space>"] = cmp.mapping.complete(),
-}
-
-lsp_zero.setup({
-    cmp = {
-        mapping = cmp_mappings,
-    },
-    preferences = {
-        sign_icons = {
-            error = "E",
-            warn = "W",
-            hint = "H",
-            info = "I",
-        },
-    },
-})
-
--- Optional: Configure pylsp specifically
-require("lspconfig").pylsp.setup({
-    settings = {
-        pylsp = {
-            plugins = {
-                ruff = { enabled = true },
-                pycodestyle = { enabled = false },
-                pyflakes = { enabled = false },
-                mccabe = { enabled = false },
-                pyright = { enabled = false },
-            },
-        },
-    },
-})
-
--- Setup null-ls for formatters
-local null_ls = require("null-ls")
-local formatting = null_ls.builtins.formatting
-
-null_ls.setup({
-    sources = {
-        formatting.isort,
-        formatting.stylua,
-        formatting.prettierd.with({
-            extra_args = { "--single-quote", "--print-width=88" },
-        }),
-    },
-})
-
--- Auto commands
-vim.api.nvim_create_autocmd("BufWritePost", {
-    pattern = { "*.vue" },
-    callback = function()
-        vim.cmd("Prettier")
-        vim.cmd("write")
+  handlers = {
+    function(server_name)
+      require('lspconfig')[server_name].setup({
+        capabilities = lsp_capabilities,
+      })
     end,
-    group = vim.api.nvim_create_augroup("AutoFormat", { clear = true }),
+    lua_ls = function()
+      require('lspconfig').lua_ls.setup({
+        capabilities = lsp_capabilities,
+        settings = {
+          Lua = {
+            runtime = {
+              version = 'LuaJIT'
+            },
+            diagnostics = {
+              globals = {'vim'},
+            },
+            workspace = {
+              library = {
+                vim.env.VIMRUNTIME,
+              }
+            }
+          }
+        }
+      })
+    end,
+  }
 })
 
--- Diagnostics config
+
+vim.api.nvim_create_autocmd({"BufRead", "BufNewFile"}, {
+    pattern = {"Jenkinsfile", "*.jf"},
+    callback = function()
+        vim.bo.filetype = "groovy"
+    end,
+})
+
+
+
+local cmp = require('cmp')
+local cmp_select = {behavior = cmp.SelectBehavior.Select}
+
+cmp.setup({
+  sources = cmp.config.sources({
+    {name = 'nvim_lsp'},  
+    {name = 'luasnip'},  
+  }, {
+    {name = 'buffer'},
+  }),
+  mapping = cmp.mapping.preset.insert({
+    ['<C-p>'] = cmp.mapping.select_prev_item(cmp_select),
+    ['<C-n>'] = cmp.mapping.select_next_item(cmp_select),
+    ['<C-y>'] = cmp.mapping.confirm({select = true}),
+    ['<C-Space>'] = cmp.mapping.complete(),
+  }),
+  snippet = {
+    expand = function(args)
+      require('luasnip').lsp_expand(args.body)
+    end,
+  },
+})
+
 vim.diagnostic.config({
-    virtual_text = true,
+    -- update_in_insert = true,
+    float = {
+        focusable = false,
+        style = "minimal",
+        border = "rounded",
+        source = "always",
+        header = "",
+        prefix = "",
+    },
 })
 
--- Optional: format shortcut
 vim.keymap.set("n", "<leader>fmt", function()
-    vim.lsp.buf.format({
-        filter = function(client)
-            return client.name ~= "tsserver" and client.name ~= "volar"
-        end,
-    })
+   vim.lsp.buf.format()
 end)
-
--- Copilot remap
-vim.g.copilot_no_tab_map = true
-vim.keymap.set("i", "<C-J>", 'copilot#Accept("\\<CR>")', {
-    expr = true,
-    replace_keycodes = false,
-})
-
